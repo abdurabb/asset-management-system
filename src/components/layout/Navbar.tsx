@@ -41,6 +41,7 @@ export default function Navbar() {
       .toUpperCase() || "U";
 
   const handleLogout = () => {
+    void fetch("/api/auth/logout", { method: "POST" });
     dispatch(logout());
     router.replace("/");
   };

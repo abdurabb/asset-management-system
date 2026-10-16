@@ -1,10 +1,12 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
+import { LIST_PAGE_SIZE } from "@/lib/pagination";
+import { useAppSelector } from "@/redux/hooks";
 
-export const LIST_PAGE_SIZE = 10;
+export { LIST_PAGE_SIZE };
 
 export type PaginationMeta = {
   page: number;
@@ -23,8 +25,12 @@ export function usePagedList<T>(
   url: string,
   params: Record<string, string | number | boolean | undefined>,
 ) {
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+
   return useQuery({
     queryKey: [key, "list", params],
+    enabled: isAuthenticated,
+    placeholderData: keepPreviousData,
     queryFn: async (): Promise<PageResult<T>> => {
       const res = await api.get(url, {
         params: Object.fromEntries(

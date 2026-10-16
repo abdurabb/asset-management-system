@@ -1,10 +1,9 @@
-// guards/AuthGuard.tsx
-
 "use client";
 
-import { useAppSelector } from "@/redux/hooks";
-import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+
+import { useAppSelector } from "@/redux/hooks";
 
 export default function AuthGuard({
   children,
@@ -12,21 +11,22 @@ export default function AuthGuard({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-
-  const isAuthenticated = useAppSelector(
-    (state) => state.auth.isAuthenticated
-  );
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const rehydrated = useAppSelector((state) => {
+    const persist = (state.auth as { _persist?: { rehydrated?: boolean } })._persist;
+    return Boolean(persist?.rehydrated);
+  });
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (rehydrated && !isAuthenticated) {
       router.replace("/");
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, rehydrated, router]);
 
-  if (!isAuthenticated) {
+  if (rehydrated && !isAuthenticated) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#0f0f1a] text-white">
-        <p className="text-sm font-semibold text-slate-200">Redirecting to login...</p>
+      <main className="flex min-h-dvh items-center justify-center bg-slate-50">
+        <p className="text-sm font-semibold text-slate-800">Redirecting to login...</p>
       </main>
     );
   }

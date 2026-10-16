@@ -113,7 +113,7 @@ function isCompactScreen() {
   return window.matchMedia("(max-width: 1023px)").matches;
 }
 
-export default function Sidebar() {
+export default function Sidebar({ initialRole = null }: { initialRole?: string | null }) {
   const pathname = usePathname();
   const dispatch = useDispatch<AppDispatch>();
   const collapsed = useSelector(
@@ -122,7 +122,8 @@ export default function Sidebar() {
   const mobileOpen = useSelector(
     (state: RootState) => state.layout.mobileSidebarOpen,
   );
-  const role = useSelector((state: RootState) => state.auth.role) as UserOneRole | null;
+  const reduxRole = useSelector((state: RootState) => state.auth.role) as UserOneRole | null;
+  const role = (reduxRole || initialRole) as UserOneRole | null;
   const { data: company } = useCompany();
 
   const closeMobile = () => {

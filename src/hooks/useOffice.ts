@@ -1,8 +1,9 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { showToast } from "@/lib/toast";
+import { useAppSelector } from "@/redux/hooks";
 
 import type {
   Office,
@@ -12,9 +13,14 @@ import type {
 
 const OFFICE_QUERY_KEY = ["offices"];
 
+function useCanFetch() {
+  return useAppSelector((state) => state.auth.isAuthenticated);
+}
+
 export function useOffices() {
   return useQuery({
     queryKey: OFFICE_QUERY_KEY,
+    enabled: useCanFetch(),
     queryFn: async (): Promise<Office[]> => {
       const response = await api.get("/offices", {
         params: { limit: 100, isActive: true },
@@ -33,6 +39,8 @@ export function useOfficeDirectory(params: {
 }) {
   return useQuery({
     queryKey: [...OFFICE_QUERY_KEY, "directory", params],
+    enabled: useCanFetch(),
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       const response = await api.get("/offices", {
         params: Object.fromEntries(

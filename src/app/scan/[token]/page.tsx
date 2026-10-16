@@ -1,28 +1,26 @@
-"use client";
-
-import { useParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
 import { Package } from "lucide-react";
+import { NextRequest } from "next/server";
 
+import { getAssetByQrTokenController } from "@/lib/backend/controller/assetController";
 import type { Asset } from "@/types/asset";
 
-export default function ScanPage() {
-  const params = useParams<{ token: string }>();
-  const token = params.token;
+export const dynamic = "force-dynamic";
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["scan", token],
-    queryFn: async (): Promise<Asset> => {
-      const res = await fetch(`/api/scan/${token}`);
-      const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json.message || "Asset not found");
-      }
-      return json.data;
-    },
-    enabled: Boolean(token),
-    retry: false,
-  });
+export default async function ScanPage({
+  params,
+}: {
+  params: Promise<{ token: string }>;
+}) {
+  const { token } = await params;
+  const response = await getAssetByQrTokenController(
+    new NextRequest("http://assetflow.internal/api/scan/" + token),
+    { params: Promise.resolve({ id: token }) },
+  );
+  const json = (await response.json()) as {
+    success?: boolean;
+    data?: Asset;
+  };
+  const data = response.ok && json.success ? json.data : null;
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-10">
@@ -37,8 +35,7 @@ export default function ScanPage() {
           </div>
         </div>
 
-        {isLoading && <p className="text-sm text-slate-800">Looking up asset...</p>}
-        {isError && (
+        {!data && (
           <p className="text-sm text-red-600">
             Asset not found or QR code is invalid.
           </p>
@@ -57,9 +54,7 @@ export default function ScanPage() {
               </div>
               <div>
                 <dt className="text-slate-800">Office</dt>
-                <dd className="font-medium text-slate-800">
-                  {data.office?.name || "-"}
-                </dd>
+                <dd className="font-medium text-slate-800">{data.office?.name || "-"}</dd>
               </div>
               <div>
                 <dt className="text-slate-800">Category</dt>
@@ -69,9 +64,7 @@ export default function ScanPage() {
               </div>
               <div>
                 <dt className="text-slate-800">Location</dt>
-                <dd className="font-medium text-slate-800">
-                  {data.location || "-"}
-                </dd>
+                <dd className="font-medium text-slate-800">{data.location || "-"}</dd>
               </div>
               <div className="col-span-2">
                 <dt className="text-slate-800">Assigned to</dt>

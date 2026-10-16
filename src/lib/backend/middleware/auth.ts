@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { JwtPayload } from "jsonwebtoken";
 
+import { ACCESS_COOKIE } from "@/lib/backend/cookies";
 import { verifyToken } from "@/lib/backend/handlers/jwt";
 import { prisma } from "@/lib/backend/prisma";
 import { UserOneRole } from "@/lib/constants/roles";
@@ -8,40 +9,60 @@ import { User } from "@/types/user";
 
 export type UserRole = UserOneRole;
 
-export async function requireAuth(
-  req: NextRequest,
-): Promise<User | NextResponse> {
+type AccessPayload = JwtPayload & {
+  role?: string;
+  officeId?: string | null;
+  name?: string;
+  email?: string;
+};
+
+export type AuthResult =
+  | { ok: true; auth: User }
+  | { ok: false; status: number; message: string };
+
+function userFromClaims(payload: AccessPayload): User | null {
+  if (!payload.id || !payload.role || !payload.email) return null;
+
+  return {
+    userId: String(payload.id),
+    role: payload.role as UserRole,
+    user: {
+      id: String(payload.id),
+      name: String(payload.name || ""),
+      email: String(payload.email),
+      role: String(payload.role),
+      officeId: payload.officeId ? String(payload.officeId) : null,
+      isActive: true,
+      description: null,
+      createdAt: new Date(0),
+      updatedAt: new Date(0),
+    },
+  };
+}
+
+export function readAccessToken(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
-
-  if (!authHeader?.startsWith("Bearer ")) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Unauthorized: no token provided",
-      },
-      { status: 401 },
-    );
+  if (authHeader?.startsWith("Bearer ")) {
+    return authHeader.substring(7);
   }
+  return req.cookies.get(ACCESS_COOKIE)?.value || null;
+}
 
-  const token = authHeader.substring(7);
-
+export async function authenticateToken(token: string): Promise<AuthResult> {
   try {
-    const payload = verifyToken(token) as JwtPayload;
+    const payload = verifyToken(token) as AccessPayload;
 
     if (!payload.id) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Unauthorized: invalid token",
-        },
-        { status: 401 },
-      );
+      return { ok: false, status: 401, message: "Unauthorized: invalid token" };
+    }
+
+    const fromClaims = userFromClaims(payload);
+    if (fromClaims) {
+      return { ok: true, auth: fromClaims };
     }
 
     const user = await prisma.user.findUnique({
-      where: {
-        id: String(payload.id),
-      },
+      where: { id: String(payload.id) },
       select: {
         id: true,
         name: true,
@@ -56,41 +77,59 @@ export async function requireAuth(
     });
 
     if (!user) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Unauthorized: user not found",
-        },
-        { status: 401 },
-      );
+      return { ok: false, status: 401, message: "Unauthorized: user not found" };
     }
 
     if (!user.isActive) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Your account has been deactivated",
-        },
-        { status: 403 },
-      );
+      return {
+        ok: false,
+        status: 403,
+        message: "Your account has been deactivated",
+      };
     }
 
     return {
-      userId: user.id,
-      role: user.role as UserRole,
-      user,
+      ok: true,
+      auth: {
+        userId: user.id,
+        role: user.role as UserRole,
+        user,
+      },
     };
   } catch (error) {
     console.error("Auth error:", error);
+    return {
+      ok: false,
+      status: 401,
+      message: "Unauthorized: invalid or expired token",
+    };
+  }
+}
 
+export async function requireAuth(
+  req: NextRequest,
+): Promise<User | NextResponse> {
+  const token = readAccessToken(req);
+
+  if (!token) {
     return NextResponse.json(
       {
         success: false,
-        message: "Unauthorized: invalid or expired token",
+        message: "Unauthorized: no token provided",
       },
       { status: 401 },
     );
   }
+
+  const result = await authenticateToken(token);
+  if (!result.ok) {
+    return NextResponse.json(
+      { success: false, message: result.message },
+      { status: result.status },
+    );
+  }
+
+  return result.auth;
 }
 
 // =====================================================

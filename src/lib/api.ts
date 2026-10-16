@@ -83,6 +83,7 @@ api.interceptors.response.use(
       }
 
       store.dispatch(logout());
+      void fetch("/api/auth/logout", { method: "POST" });
       navigateTo("/");
       showToast.error("Your session has expired. Please login again.");
       return Promise.reject(error);

@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { showToast } from "@/lib/toast";
+import { useAppSelector } from "@/redux/hooks";
 import type {
   AppUser,
   CreateUserPayload,
@@ -27,9 +28,14 @@ import type {
   Company,
 } from "@/types/asset";
 
+function useCanFetch() {
+  return useAppSelector((state) => state.auth.isAuthenticated);
+}
+
 export function useDashboard() {
   return useQuery({
     queryKey: ["dashboard"],
+    enabled: useCanFetch(),
     queryFn: async (): Promise<DashboardStats> => {
       const res = await api.get("/dashboard");
       return res.data.data;
@@ -40,7 +46,7 @@ export function useDashboard() {
 export function useUsers(params?: Record<string, string | number | undefined>) {
   return useQuery({
     queryKey: ["users", params],
-    enabled: params !== undefined,
+    enabled: useCanFetch() && params !== undefined,
     queryFn: async (): Promise<AppUser[]> => {
       const res = await api.get("/users", { params });
       return res.data.data;
@@ -99,6 +105,7 @@ export function useDeleteUser() {
 export function useAssets(params?: Record<string, string | number | undefined>) {
   return useQuery({
     queryKey: ["assets", params],
+    enabled: useCanFetch(),
     queryFn: async (): Promise<Asset[]> => {
       const res = await api.get("/assets", { params });
       return res.data.data;
@@ -160,7 +167,7 @@ export function useDeleteAsset() {
 export function useAssetQr(assetId: string | null) {
   return useQuery({
     queryKey: ["asset-qr", assetId],
-    enabled: Boolean(assetId),
+    enabled: useCanFetch() && Boolean(assetId),
     queryFn: async () => {
       const res = await api.get(`/assets/${assetId}/qr`);
       return res.data.data as {
@@ -178,6 +185,7 @@ export function useAssetQr(assetId: string | null) {
 export function useCategories(params?: { isActive?: boolean; search?: string }) {
   return useQuery({
     queryKey: ["categories", params],
+    enabled: useCanFetch(),
     queryFn: async (): Promise<Category[]> => {
       const res = await api.get("/categories", {
         params: { limit: 100, ...params },
@@ -237,6 +245,7 @@ export function useAssignments(
 ) {
   return useQuery({
     queryKey: ["assignments", params],
+    enabled: useCanFetch(),
     queryFn: async (): Promise<Assignment[]> => {
       const res = await api.get("/assignments", { params });
       return res.data.data;
@@ -281,6 +290,7 @@ export function useMaintenance(
 ) {
   return useQuery({
     queryKey: ["maintenance", params],
+    enabled: useCanFetch(),
     queryFn: async (): Promise<MaintenanceRecord[]> => {
       const res = await api.get("/maintenance", { params });
       return res.data.data;
@@ -329,6 +339,7 @@ export function useUpdateMaintenance() {
 export function useDocuments() {
   return useQuery({
     queryKey: ["documents"],
+    enabled: useCanFetch(),
     queryFn: async (): Promise<DocumentItem[]> => {
       const res = await api.get("/documents");
       return res.data.data;
@@ -367,6 +378,7 @@ export function useDeleteDocument() {
 export function useAuditLogs() {
   return useQuery({
     queryKey: ["audit-logs"],
+    enabled: useCanFetch(),
     queryFn: async (): Promise<AuditLogItem[]> => {
       const res = await api.get("/audit-logs");
       return res.data.data;
@@ -377,6 +389,7 @@ export function useAuditLogs() {
 export function useReports() {
   return useQuery({
     queryKey: ["reports"],
+    enabled: useCanFetch(),
     queryFn: async () => {
       const res = await api.get("/reports");
       return res.data.data;
@@ -387,6 +400,7 @@ export function useReports() {
 export function useCompany() {
   return useQuery({
     queryKey: ["company"],
+    enabled: useCanFetch(),
     queryFn: async (): Promise<Company> => {
       const res = await api.get("/company");
       return res.data.data;

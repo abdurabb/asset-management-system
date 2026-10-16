@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcrypt";
 import { JwtPayload } from "jsonwebtoken";
 
+import { applyAuthCookies } from "@/lib/backend/cookies";
 import { prisma } from "@/lib/backend/prisma";
-import { generateToken, verifyToken } from "@/lib/backend/handlers/jwt";
+import { generateToken, verifyToken, type AccessClaims } from "@/lib/backend/handlers/jwt";
 import { handleError } from "../handlers/handleError";
 import { AppError } from "@/types/error.types";
 import { LoginPayload } from "@/types/auth";
@@ -64,24 +65,34 @@ export async function loginController(
       );
     }
 
-    const access_token = generateToken(user.id, "1h");
-    const refresh_token = generateToken(user.id, "7d");
+    const claims: AccessClaims = {
+      role: user.role,
+      officeId: user.officeId,
+      name: user.name,
+      email: user.email,
+    };
+    const access_token = generateToken(user.id, "1h", claims);
+    const refresh_token = generateToken(user.id, "7d", claims);
 
-    return NextResponse.json(
-      {
-        success: true,
-        message: "Login successful",
-        access_token,
-        refresh_token,
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          officeId: user.officeId,
+    return applyAuthCookies(
+      NextResponse.json(
+        {
+          success: true,
+          message: "Login successful",
+          access_token,
+          refresh_token,
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            officeId: user.officeId,
+          },
         },
-      },
-      { status: 200 },
+        { status: 200 },
+      ),
+      access_token,
+      refresh_token,
     );
   } catch (error) {
     return handleError(error as AppError);
@@ -121,21 +132,31 @@ export async function refreshController(
       );
     }
 
-    const access_token = generateToken(user.id, "1h");
-    const refresh_token = generateToken(user.id, "7d");
+    const claims: AccessClaims = {
+      role: user.role,
+      officeId: user.officeId,
+      name: user.name,
+      email: user.email,
+    };
+    const access_token = generateToken(user.id, "1h", claims);
+    const refresh_token = generateToken(user.id, "7d", claims);
 
-    return NextResponse.json({
-      success: true,
+    return applyAuthCookies(
+      NextResponse.json({
+        success: true,
+        access_token,
+        refresh_token,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          officeId: user.officeId,
+        },
+      }),
       access_token,
       refresh_token,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        officeId: user.officeId,
-      },
-    });
+    );
   } catch (error) {
     const err = error as Error;
     if (err.name === "TokenExpiredError" || err.name === "JsonWebTokenError") {

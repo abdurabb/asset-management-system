@@ -3,11 +3,22 @@
 import jwt, { SignOptions, JwtPayload } from "jsonwebtoken";
 import crypto from "crypto";
 
-export const generateToken = (id: string, time: string = "1h"): string => {
+export type AccessClaims = {
+  role: string;
+  officeId?: string | null;
+  name: string;
+  email: string;
+};
+
+export const generateToken = (
+  id: string,
+  time: string = "1h",
+  claims?: AccessClaims,
+): string => {
   const secret = process.env.JWT_SECRET;
   if (!secret) throw new Error("JWT_SECRET is not defined");
 
-  const token = jwt.sign({ id }, secret, { expiresIn: time } as SignOptions);
+  const token = jwt.sign({ id, ...claims }, secret, { expiresIn: time } as SignOptions);
   return encrypt(token);
 };
 
