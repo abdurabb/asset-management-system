@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  color-scheme: light;
 }
 
 @theme inline {
@@ -12,15 +13,53 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+body {
+  background: var(--background);
+  color: #0f172a;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+input,
+select,
+textarea {
+  color: #0f172a;
+}
+
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+input::placeholder,
+textarea::placeholder {
+  color: #334155;
+}
+
+#qr-print-root {
+  position: absolute;
+  left: -10000px;
+  top: 0;
+}
+
+@media print {
+  body.printing-qr > *:not(#qr-print-root) {
+    display: none !important;
+  }
+
+  body.printing-qr #qr-print-root {
+    position: static;
+    left: auto;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    padding-top: 12mm;
+  }
+
+  body.printing-qr #qr-print-root img {
+    width: 70mm;
+    height: 70mm;
+  }
 }
